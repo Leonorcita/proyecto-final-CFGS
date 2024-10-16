@@ -1,0 +1,82 @@
+workflow:
+    rules:
+        - if: $CI_COMMIT_BRANCH != "main" && $CI_PIPELINE_SOURCE != "merge_request_event" #Si el commit de no es de la rama main y el disparador de la pipeline no es una solicitud de integracion
+          when: never #En caso de que se cumpla, nunca se ejecuta
+        - when: always #En caso contrario, siempre se ejecuta
+stages:
+    - tests
+    - sonarqube_check
+    - update_web
+
+run_trivy_test:
+    stage: tests
+    tags:
+        - shell
+    script:
+      - ERRORES=$(docker run --rm aquasec/trivy image php:7.4-apache --severity HIGH,CRITICAL | grep -w "Total:" | cut -d" " -f2 | awk '{ sum += $1 } END { print sum }')
+      - |
+        if [[ "$ERRORES" -eq "0" ]];
+        then
+          echo No hay errores
+        else
+          echo Hay $ERRORES errores en la imagen
+        fi
+      - curl --request POST --header "PRIVATE-TOKEN":" $PROJECT_TOKEN" "http://150.136.254.165/api/v4/projects/42/variables" --form "key=ERRORES" --form "value=$ERRORES"
+    rules:
+      - if: $ACCION == "crear" || $CI_COMMIT_MESSAGE == "crear"
+        when: always
+
+run_server3_test: #Ejecuta el playbook de ansible para ejecutar los tests sobre el servidor3.
+    stage: tests
+    tags:
+      - shell
+    before_script:
+      - chmod 666 ./scripts/host.sh
+      - bash ./scripts/host.sh $ANSIBLE_HOST $ANSIBLE_IP $ANSIBLE_USER $ANSIBLE_PASS
+    script:
+      - ansible-playbook xample.yml -v --extra-vars "errors=$ERRORES gitlab_token=$PROJECT_TOKEN host=$ANSIBLE_HOST user=$ANSIBLE_USER" # Se le añade 1 variable para los errores
+    rules:
+      - if: $ACCION == "crear" || $ACCION == "comprobar" || $CI_COMMIT_MESSAGE == "crear" || $CI_COMMIT_MESSAGE == "comprobar"
+        when: always
+
+sonarqube_check:
+  stage: sonarqube_check
+  tags:
+   - sonardocker
+  image: 
+    name: hub4rpi64/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+      - .scannerwork
+  script:
+    - |
+      sonar-scanner \
+        -Dsonar.language=php \
+        -Dsonar.qualitygate.wait=true \
+        -Dsonar.sources=./web \
+        -Dsonar.host.url=http://129.153.28.42:9000/ \
+        -Dsonar.projectKey=serverweb \
+        -Dsonar.login=sqp_b1cd6d6fb5b0e9adc3945c7fff1b8dce7549b5d8
+  allow_failure: true
+  rules:
+    - if: $ACCION == "sonar" || $CI_COMMIT_MESSAGE == "sonar"
+
+update_web:
+    stage: update_web
+    tags:
+     - shell
+    before_script:
+      - chmod 666 ./scripts/host.sh
+      - bash ./scripts/host.sh $ANSIBLE_HOST $ANSIBLE_IP $ANSIBLE_USER $ANSIBLE_PASS
+    script: 
+      - ansible-playbook ./update_web.yml -v --extra-vars "token=$PROJECT_TOKEN host=$ANSIBLE_HOST user=$ANSIBLE_USER"
+    rules:
+      - if: $ACCION == "actualizar" || $CI_COMMIT_MESSAGE == "actualizar"
+        when: always
+    

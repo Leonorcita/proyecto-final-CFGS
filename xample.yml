@@ -1,0 +1,165 @@
+   
+- hosts: "{{ host }}" #Host de destino especificado en el fichero /etc/anisible/hosts(servidor3)
+  collections: #Colecciones (librerias) necesarias para ejecutar las tareas
+    - community.docker #Esta coleccion contiene los modulos necesarios de docker.
+       
+  remote_user: "{{ user }}" #Usuario root del servidor3
+  vars:
+    container_name: "prueba_webphp"
+
+  tasks: #
+    - name: Comprobar conectividad
+      ping: #Devuelve un pong si hay conectividad
+
+    - name: Comprobar si el servidor está activo
+      wait_for_connection:
+        timeout: 10
+      register: tiempo
+    - debug:
+        msg: La prueba de conexion ha tardado "{{tiempo.elapsed}}" segundos
+
+    - name: Comprobar si docker está instalado
+      stat:
+       path: /usr/bin/docker
+      register: docker_check #Se guarda en la variable docker_check un true si está instalado o false si no está instalado
+
+    - name: Instalar docker
+      dnf:
+       name: docker-ce
+       state: present
+      when: not docker_check.stat.exists #Si no está instalado, ejecuta el comando dnf install docker-ce
+      
+    - name: Comprobar si el volumen existe
+      stat:
+       path: "/srv/{{container_name}}"
+      register: volume_check #Se guarda en la variable volume_check un true si está instalado o false si no está instalado
+
+    - name: Muestra mensaje si el contenedor webphp existe
+      docker_container_info:
+        name: "{{container_name}}"
+      no_log: True #No muestra toda la informacion de la tarea docker_container_info (docker inspect ...)
+      register: prueba_webphp_container_info #Se guarda en la variable webphp_container_info un true si el contenedor existe o o false si no existe
+    - debug:
+        msg: "El contenedor existe"
+      when: prueba_webphp_container_info.exists #Si el contenedor existe muestra el mensaje
+
+    - name: Crear el contenedor webphp
+      shell: docker run -d --name "{{container_name}}" --hostname="{{container_name}}" --privileged -v /srv/"{{container_name}}":/var/www/html -p 80:80 php:7.4-apache #pte confirmar puerto
+      when: not prueba_webphp_container_info.exists #Si el contenedor no existe, se ejecuta un nuevo contenedor
+
+    - name: Actualizar contenedor webphp
+      docker_container_exec:
+        container: "{{container_name}}"
+        command: apt-get update
+      when: not volume_check.stat.exists
+    
+    - name: Instalar extensiones
+      docker_container_exec: 
+        container: "{{container_name}}"
+        command: docker-php-ext-install mysqli
+      when: not volume_check.stat.exists
+        
+    - name: Modificar files1
+      docker_container_exec: 
+       container: "{{container_name}}"
+       command: sed -i 's?;   extension=/path/to/extension/msql.so?extension=/usr/local/lib/php/extensions/no-debug-non-zts-20151012/mysqli.so?' /usr/local/etc/php/php.ini-development
+      when: not volume_check.stat.exists
+
+    - name: Modificar files2
+      docker_container_exec: 
+       container: "{{container_name}}"
+       command: sed -i 's?;   extension=/path/to/extension/msql.so?extension=/usr/local/lib/php/extensions/no-debug-non-zts-20151012/mysqli.so?' /usr/local/etc/php/php.ini-production
+      when: not volume_check.stat.exists
+
+    - name: Instalar curl
+      docker_container_exec:
+        container: "{{container_name}}"
+        command: apt-get install -y curl
+      when: not volume_check.stat.exists
+  
+    - name: Ejecutar curl
+      docker_container_exec:
+        container: "{{container_name}}"
+        command:  /bin/bash -c 'curl -sS https://getcomposer.org/installer | php'
+      when: not volume_check.stat.exists
+
+    - name: Copia composer
+      docker_container_exec:
+        container: "{{container_name}}"      
+        command:  mv composer.phar /usr/bin/composer 
+      when: not volume_check.stat.exists
+
+    - name: Instalar zip
+      docker_container_exec:
+        container: "{{container_name}}" 
+        command: apt-get install -y zip 
+      when: not volume_check.stat.exists
+
+#    - name: Ir a directorio pagina web
+#      docker_container_exec:
+#        container: "{{container_name}}"
+#        command: cd /var/www/html
+#      when: not volume_check.stat.exists
+
+    - name: Agregar librerias guzzle #Para que pueda ejecutarse necesita estar en /var/www/html
+      docker_container_exec:
+        container: "{{container_name}}"       
+        command: composer require guzzlehttp/guzzle 
+      when: not volume_check.stat.exists
+
+    - name: Agregar librerias vlucas #Para que pueda ejecutarse necesita estar en /var/www/html
+      docker_container_exec:
+        container: "{{container_name}}"
+        command: composer require vlucas/phpdotenv
+      when: not volume_check.stat.exists
+
+    - name: Set environment variable in Docker container
+      docker_container_exec:
+        container: "{{ container_name }}"
+        command: /bin/bash -c 'if [ ! -f /var/.env ]; then echo "PROJECT_TOKEN={{ gitlab_token }}" > /var/.env; else grep -qxF "PROJECT_TOKEN={{ gitlab_token }}" /var/.env || echo "PROJECT_TOKEN={{ gitlab_token }}" >> /var/.env; fi'
+      when: not volume_check.stat.exists      
+
+    - name: Reiniciar docker
+      shell: docker restart "{{container_name}}"
+      when: not volume_check.stat.exists
+      
+    # - name: Muestra mensaje si el contenedor esta activo
+    #   shell: 'docker ps -f status=running | grep -w proyectomdb | wc -l'
+    #   register: resultado
+    # - debug:
+    #     msg: El contenedor de mariadb está activo
+    #   when: resultado.stdout > "0"
+
+    - name: Copiar el fichero de configuracion del servidor1 al servidor3 
+      copy: #Este modulo permite copiar ficheros entre maquinas.Pasamos el contenido de la pagina web del servidor1 al servidor3
+       src: ./web #Ruta del servidor1
+       dest: /tmp #Ruta del servidor3
+       owner: "{{ user }}" #Usuario propietario
+       group: "{{ user }}" #Grupo propietario
+       mode: '0644' #Permisos
+       directory_mode:
+      when: not volume_check.stat.exists #Se realiza la copia si el volumen no existe
+
+    #- name: Copiar el fichero de configuracion del servidor3 al contenedor webphp
+     # docker_container_copy_into:
+      #  container: webphp #Nombre del contenedor
+       # path: /tmp/web/ #Ruta del servidor3
+        #container_path: /var/www/html/ #Ruta del contenedor webphp (ubicado en el servidor3)
+      #when: not volume_check.stat.exists #Se realiza la copia dentro del contenedor si el volumen no existe
+
+    - name: Copiar el fichero de configuracion del servidor3 al contenedor webphp
+      shell: docker cp /tmp/web/. "{{container_name}}":/var/www/html
+      when: not volume_check.stat.exists #Se realiza la copia si el volumen no existe
+          
+    - name: Comprobar si el contenedor webphp está en ejecución
+      docker_container_info:
+        name: "{{container_name}}"
+      no_log: True  #No muestra toda la informacion de la tarea docker_container_info (docker inspect ...)
+      register: prueba_webphp_container_info
+    - debug:
+        msg: "Estado del contenedor {{ prueba_webphp_container_info.container['State']['Status'] }}" #de la libreria State, cogemos la clave Status
+
+    - name: Ejecutar el contenedor si no está activo
+      shell: docker start "{{container_name}}"
+      no_log: True #No muestra toda la informacion del comando
+      when: prueba_webphp_container_info.container['State']['Status'] == "exited" #Inicia el contenedor si está parado "exited"

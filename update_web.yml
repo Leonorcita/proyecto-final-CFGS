@@ -1,0 +1,32 @@
+- hosts: "{{ host }}"
+  collections:
+    - community.docker
+  remote_user: "{{ user }}"
+  vars:
+    project_id: 42
+    variable_key: "PROJECT_TOKEN"
+    container_name: "prueba_webphp"
+    volume: "/srv/prueba_webphp"
+  tasks:
+     - name: Copiar el fichero de configuracion del servidor1 al servidor3 
+       copy: #Este modulo permite copiar ficheros entre maquinas.Pasamos el contenido de la pagina web del servidor1 al servidor3
+        src: ./web/ #Ruta del servidor1
+        dest: "{{ volume }}" #Ruta del servidor3
+        owner: root #Usuario propietario
+        group: root #Grupo propietario
+        mode: '0644' #Permisos
+        directory_mode:
+     - name: Coger variable de GitLab
+       uri:
+         url: "http://150.136.254.165/api/v4/projects/{{ project_id }}/variables/{{ variable_key }}"
+         method: GET
+         headers:
+           PRIVATE-TOKEN: "{{ token }}"
+           validate_certs: false
+       register: variable
+
+     - name: Establecemos las variables de entorno en el Docker Web
+       docker_container_exec:
+         container: "{{ container_name }}"
+         command: /bin/bash -c 'if [ ! -f /var/.env ]; then echo "{{ variable_key }}={{ variable.json.value }}" > /var/.env; else grep -qxF "{{ variable_key }}={{ variable.json.value }}" /var/.env || echo "{{ variable_key }}={{ variable.json.value }}" >> /var/.env; fi'
+
