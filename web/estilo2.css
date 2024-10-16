@@ -1,0 +1,202 @@
+* {
+	padding: 0;
+	margin: 0;
+}
+body {
+	font-family: cambria, optima, didot;
+}
+h1 {
+    text-align: center;
+	font-size: 65px;
+}
+h2 {
+	text-decoration: underline;
+}
+h3 {
+	margin-top: 15px;
+	margin-bottom: 15px;
+	text-transform: uppercase;
+}
+p {
+	font-size: 15px;
+}
+a {
+	text-decoration:none;
+	color: white;
+}
+div {
+    padding: 2%;
+}
+#header {
+	background-image: url("./pics/network.jpg");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 100%;
+}
+#nav {
+	width: 80%;
+	margin: 2% 8% 0% 8%;
+	height: 80px;
+	text-align: center;
+	color: white;
+}
+#menu {
+	list-style: none;
+	width: 100%;
+	margin: 1% 1% 1% 0%;
+}
+.item {
+	width: 22%;
+	height: 35px; 	
+	padding-top: 1%;
+	margin: 1% 1% 1% 0%;
+	border: 2px solid black;
+    background-color: rgba(4, 4, 4, 0.5);
+}
+#menu > li {
+	float: left;
+}
+.item:hover {
+	background-color: black;
+	border: 2px solid white;
+}
+#section {
+	float: left;
+	width: 25%;
+	height: 500px;
+	background-color: rgb(234, 234, 234);
+}
+#aside {
+	float: left;
+	width: 65%;
+	height: 500px;
+}
+	
+#radio1 {
+	display: flex;
+	flex-flow: row wrap;
+}
+#radio1 > .article {
+	flex: 1;
+}
+input[name="app"] {
+	display: none;
+}
+input[name="app"]:not(:disabled) ~ label {
+	cursor: pointer;
+}
+input[name="app"]:disabled ~ label {
+	color: darkred;
+	border-color: red;
+	box-shadow: none;
+}
+label {
+	display: block;
+	background: white;
+	border: 1px solid lightblue;
+	border-radius: 2px;
+	padding-top: 4%;
+	text-align: center;
+	box-shadow: 0px 3px 10px -2px rgba(161, 170, 166, 0.5);
+	position: relative;
+	height: 65px;
+}
+input[name="app"]:checked + label {
+	background: #8e9fe6;
+	color: white;
+}
+input[name="app"]:checked + label::after {
+	color: #3d3f43;
+	font-family: FontAwesome;
+	border: 2px solid lightblue;
+	content: "\f00c";
+	font-size: 24px;
+	position: absolute;
+	top: -25px;
+	left: 50%;
+	transform: translateX(-50%);
+	height: 50px;
+	width: 50px;
+	line-height: 50px;
+	text-align: center;
+	border-radius: 50%;
+	background: white;
+	box-shadow: 0px 2px 5px -2px rgba(0, 0, 0, 0.25);
+}
+
+#radio2 {
+	display: flex;
+	flex-flow: row wrap;
+}
+#radio2 > .article {
+	flex: 1;
+}
+input[name="ejecucion"] {
+	display: none;
+}
+input[name="ejecucion"]:not(:disabled) ~ label {
+	cursor: pointer;
+}
+input[name="ejecucion"]:disabled ~ label {
+	color: darkred;
+	border-color: red;
+	box-shadow: none;
+}
+input[name="ejecucion"]:checked + label {
+	background: #8e9fe6;
+	color: white;
+}
+input[name="ejecucion"]:checked + label::after {
+	color: #3d3f43;
+	font-family: FontAwesome;
+	border: 2px solid lightblue;
+	content: "\f00c";
+	font-size: 24px;
+	position: absolute;
+	top: -25px;
+	left: 50%;
+	transform: translateX(-50%);
+	height: 50px;
+	width: 50px;
+	line-height: 50px;
+	text-align: center;
+	border-radius: 50%;
+	background: white;
+	box-shadow: 0px 2px 5px -2px rgba(0, 0, 0, 0.25);
+}
+
+#aside #botonContinuar {
+    color: #dfcdc3;
+	font-size: 20px;
+	font-family: cambria, optima, didot;
+    width: 40%;
+    height: 40px;
+    border: none;
+    margin: 2% 30% 2% 30%;
+    background-color: #3c4245;    
+    border-radius: 3px 3px 3px 3px;
+    -moz-border-radius: 3px 3px 3px 3px;
+    -webkit-border-radius: 3px 3px 3px 3px;
+}
+#aside #botonContinuar:hover {
+	background-color: #8e9fe6;
+    color: white;
+}
+#labelDenegado {
+	color:#3c4245;
+	margin: 1%;
+	text-align: center;
+}
+#labelApps {
+	color:#3c4245;
+	margin: 1%;
+	text-align: center;
+}
+
+/* Catálogo */
+
+.unidad {
+	width: 100px;
+	height: 100px;
+	border: 1px solid pink;
+}

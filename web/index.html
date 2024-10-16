@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1, initial-scale=1.0">
+    <link rel="stylesheet" href="estilo1.css">
+    <link rel="icon" href="./pics/blockchain.png">
+    <title>Login</title>
+</head>
+<body>
+    <div id="login">
+        <h1>Login</h1></br>
+            <form id="formLogin" action="conexion.php" method="POST">
+                Usuario:
+                </br><input type="text" name="user" required>   
+                Contraseña:                 
+                </br><input type="password" name="password" required>
+                </br><input type="hidden" name="os" id="inputOS">                
+                <input name="enviar" type="submit" value="Ingresar" class="botonLogin">
+                <script>
+                        let userAgent = navigator.userAgent;
+                        let distribucion="Desconocido";
+                        let inpOS = document.getElementById("inputOS");
+                        let hdrOS = document.getElementById("headerOS");
+                        if (/Windows/.test(userAgent)) {
+                          distribucion = "Windows";
+                        } else if (/Linux/.test(userAgent)) {
+                          distribucion = "Linux";
+                        }
+                        inpOS.value=distribucion;
+                </script>
+
+            </form>
+    </div>
+</body>
+</html>
